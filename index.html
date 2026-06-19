@@ -825,13 +825,14 @@ function openCompare(){
 /* ============ Inventario real (editable) ============ */
 function newKey(){return 'l'+(++invSeq);}
 function loadInv(){
+  const baseV=window.LOTES_REALES_V||1;
   let arr=null;
-  try{const c=JSON.parse(localStorage.getItem(INVKEY)||'null');if(c&&c.length)arr=c;}catch(e){}
-  if(!arr)arr=(window.LOTES_REALES||[]).map(r=>Object.assign({},r,{loteNum:null}));
+  try{const c=JSON.parse(localStorage.getItem(INVKEY)||'null');if(c&&c.v===baseV&&c.items&&c.items.length)arr=c.items;}catch(e){}
+  if(!arr)arr=(window.LOTES_REALES||[]).map(r=>Object.assign({loteNum:null},r));
   arr.forEach(r=>{if(!r.key)r.key='l'+(++invSeq);else{const n=+String(r.key).replace(/\D/g,'');if(n>invSeq)invSeq=n;}if(r.loteNum===undefined)r.loteNum=null;});
   return arr;
 }
-function saveInv(){try{localStorage.setItem(INVKEY,JSON.stringify(REALES));}catch(e){toast('Almacenamiento lleno');}buildLinks();}
+function saveInv(){try{localStorage.setItem(INVKEY,JSON.stringify({v:(window.LOTES_REALES_V||1),items:REALES}));}catch(e){toast('Almacenamiento lleno');}buildLinks();}
 function buildLinks(){linkByNum={};REALES.forEach(r=>{if(r.loteNum!=null)linkByNum[r.loteNum]=r;});}
 function refreshAllStyles(){for(const id in layers){if(layers[id].setStyle)layers[id].setStyle(estilo(id));}refreshLabels();}
 function loteIdByNum(n){const f=PARCELAS.features.find(x=>x.properties.num==n);return f?f.properties.id:null;}
