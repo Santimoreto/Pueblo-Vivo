@@ -364,7 +364,6 @@ button{font-family:inherit;cursor:pointer}
     <button class="fab" id="btnSat" title="Satélite / mapa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg></button>
   </div>
-  <div class="legend" id="legend"></div>
   <div class="tray" id="tray">
     <div class="info"><span id="trayN">0</span> seleccionados<small>para comparar (máx 3)</small></div>
     <button id="trayCmp">Comparar</button>
@@ -468,9 +467,8 @@ function estilo(id){
   if(!active){ // gris transparente (contexto)
     return {color:sel?'#b5532a':'#7d766a',weight:sel?3:1,fillColor:'#8c857a',fillOpacity:0.07,opacity:u.fav?0.85:0.45,dashArray:null};
   }
-  const pausada=inf.nota&&/PAUSAD/i.test(inf.nota);
-  const c=MODE==='comprar'?(pausada?'#e0a32e':'#3fa66a'):'#2b9aa0';
-  return {color:sel?'#b5532a':c,weight:(u.fav||sel)?3.4:2,fillColor:c,fillOpacity:0.42,dashArray:pausada?'5,4':null,opacity:1};
+  const c=MODE==='comprar'?'#3fa66a':'#2b9aa0';
+  return {color:sel?'#b5532a':c,weight:(u.fav||sel)?3.4:2,fillColor:c,fillOpacity:0.42,dashArray:null,opacity:1};
 }
 function isAvailableNow(inf){ if(!inf.rental)return false; return !inf.rental.busy.includes(0); }
 
@@ -601,18 +599,7 @@ function renderFilters(){
   }
   document.getElementById('favCount').textContent=c.fav;
 }
-function renderLegend(){
-  const el=document.getElementById('legend');
-  if(MODE==='alojar'){el.innerHTML=`<h4>Alojamiento</h4>
-    <div class="row"><span class="sw" style="background:#2b9aa055;border-color:#1f7a80"></span> En alquiler</div>
-    <div class="row"><span class="sw" style="background:#8c857a26;border-color:#9a9183"></span> No listado</div>
-    <div class="row"><span class="me-dot" style="width:13px;height:13px"></span> Estás acá</div>`;
-  }else{el.innerHTML=`<h4>Lotes</h4>
-    <div class="row"><span class="sw" style="background:#3fa66a55;border-color:#2c7d4e"></span> En venta</div>
-    <div class="row"><span class="sw" style="background:#e0a32e55;border-color:#b07d12"></span> En pausa</div>
-    <div class="row"><span class="sw" style="background:#8c857a26;border-color:#9a9183"></span> No listado</div>
-    <div class="row"><span class="me-dot" style="width:13px;height:13px"></span> Estás acá</div>`;}
-}
+function renderLegend(){}
 
 /* ============ Cambio de modo ============ */
 function setMode(m){
@@ -644,9 +631,9 @@ function render(){
 function renderLote(id){
   const f=PARCELAS.features.find(x=>x.properties.id==id),p=f.properties,inf=info(id),u=uget(id);
   const ha=p.sup/10000;
-  const linked=!!inf.fromSheet, alq=opOf(inf)==='alquiler', pausada=inf.nota&&/PAUSAD/i.test(inf.nota);
-  const stKey=!linked?'novender':(pausada?'reservado':(alq?'disp':'libre'));
-  const stL=!linked?'No listado':(pausada?'En pausa':(alq?'En alquiler':'En venta'));
+  const linked=!!inf.fromSheet, alq=opOf(inf)==='alquiler';
+  const stKey=!linked?'novender':(alq?'disp':'libre');
+  const stL=!linked?'No listado':(alq?'En alquiler':'En venta');
   const offF=linked?inf.fotos.map(s=>`<img class="gphoto" src="${s}" loading="lazy" alt="">`).join(''):'';
   const userF=u.photos.map((s,i)=>`<img class="gphoto user" src="${s}" data-up="${i}" alt="">`).join('');
   const nearby=(inf.dist||[]).sort((a,b)=>a.m-b.m).map(d=>`<div class="nb"><div class="ico">${featIcon(d.icon==='tea'?'leaf':'drop')}</div><div class="nm">${d.name}<small>${d.desc}</small></div><div class="d">${fmtDist(d.m)}</div></div>`).join('');
