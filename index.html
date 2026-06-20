@@ -525,14 +525,15 @@ function labelHtml(id){
   if(MODE==='alojar') return heart+(isAlq(inf)?('$'+(inf.total||'')):(f.properties.num!=null?f.properties.num:''));
   return heart+eye+(f.properties.num!=null?f.properties.num:'');
 }
+const ZNUM=16; // a partir de este zoom se ven los números de parcela
 function refreshLabels(){
-  const z=map.getZoom();
+  const showNums=map.getZoom()>=ZNUM;
   for(const id in labels){
-    const inf=info(id),u=uget(id),m=labels[id],el=m.getElement();
-    if(!passesFilter(id)){if(el)el.style.display='none';continue;}
+    const m=labels[id],el=m.getElement();
+    if(!showNums||!passesFilter(id)){if(el)el.style.display='none';continue;}
     if(el)el.style.display='';
-    const html=labelHtml(id);
-    m.setIcon(L.divIcon({className:'parc-label '+(inf.estado==='libre'?'lib':''),html,iconSize:[44,18]}));
+    const inf=info(id);
+    m.setIcon(L.divIcon({className:'parc-label '+(inf.estado==='libre'?'lib':''),html:labelHtml(id),iconSize:[44,18]}));
   }
 }
 map.on('zoomend',refreshLabels);
