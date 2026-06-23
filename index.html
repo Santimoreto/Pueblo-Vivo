@@ -106,6 +106,7 @@ body.poinames .poi-pin .t{display:block}
   display:grid;place-items:center;color:var(--forest)}
 .fab svg{width:23px;height:23px}
 .fab.on{background:var(--leaf);color:#fff}
+.fab.install{background:var(--gold);color:#3a2806}
 .fab.loc.tracking{background:var(--leaf);color:#fff}
 .fab .badge{position:absolute;top:-5px;right:-5px;background:var(--terra);color:#fff;font-size:10px;font-weight:800;
   min-width:17px;height:17px;border-radius:99px;display:grid;place-items:center;padding:0 3px}
@@ -342,12 +343,6 @@ body.poinames .poi-pin .t{display:block}
     </svg>
     <span class="wm">pueblo vivo</span>
   </div>
-  <button class="tb-btn install" id="btnInstall" title="Instalar como app" style="display:none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M8 10l4 4 4-4M5 21h14"/></svg>
-  </button>
-  <button class="tb-btn" id="btnPoi" title="Puntos de interés">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-  </button>
   <button class="tb-btn" id="btnInv" title="Inventario real (planilla)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1z"/><path d="M9 5h6"/><path d="M8 11h8M8 15h5"/></svg>
   </button>
@@ -380,6 +375,8 @@ body.poinames .poi-pin .t{display:block}
 
 <div id="map">
   <div class="fab-col" style="top:14px">
+    <button class="fab install" id="btnInstall" title="Instalar como app" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M8 10l4 4 4-4M5 21h14"/></svg></button>
     <button class="fab loc" id="btnLoc" title="Mi ubicación">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
     <button class="fab" id="btnRoute" title="Recorrido de favoritos" style="position:relative">
@@ -391,6 +388,8 @@ body.poinames .poi-pin .t{display:block}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg></button>
     <button class="fab" id="btnNums" title="Mostrar números de lote">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3L7 21M17 3l-2 18M4 8.5h16M3 15.5h16"/></svg></button>
+    <button class="fab" id="btnPoi" title="Puntos de interés">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></button>
   </div>
   <div class="tray" id="tray">
     <div class="info"><span id="trayN">0</span> seleccionados<small>para comparar (máx 3)</small></div>
