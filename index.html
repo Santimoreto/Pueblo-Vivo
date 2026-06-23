@@ -534,7 +534,7 @@ function labelHtml(id){
   if(isVenta(inf)) return heart+(inf.total!=null?'$'+money(inf.total):(f.properties.num!=null?f.properties.num:''));
   return heart+eye+(f.properties.num!=null?f.properties.num:'');
 }
-const ZNUM=16; // a partir de este zoom se ven los números de parcela
+const ZNUM=15; // a partir de este zoom se ven números/precios de parcela
 function refreshLabels(){
   const z=map.getZoom(), showNums=z>=ZNUM;
   document.body.classList.toggle('poinames',showNums); // nombres de POI al acercar
