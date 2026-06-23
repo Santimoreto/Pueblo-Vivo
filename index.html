@@ -377,6 +377,8 @@ body.poinames .poi-pin .t{display:block}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg></button>
     <button class="fab" id="btnSat" title="Satélite / mapa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg></button>
+    <button class="fab" id="btnNums" title="Mostrar números de lote">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3L7 21M17 3l-2 18M4 8.5h16M3 15.5h16"/></svg></button>
   </div>
   <div class="tray" id="tray">
     <div class="info"><span id="trayN">0</span> seleccionados<small>para comparar (máx 3)</small></div>
@@ -457,10 +459,11 @@ const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Worl
 const calle=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
 calle.addTo(map);let satOn=false;document.body.classList.add('lightbase'); // default: mapa claro
 document.getElementById('btnSat').onclick=()=>{satOn=!satOn;document.body.classList.toggle('lightbase',!satOn);if(satOn){map.removeLayer(calle);sat.addTo(map);}else{map.removeLayer(sat);calle.addTo(map);}refreshLabels();};
+document.getElementById('btnNums').onclick=function(){numbersOn=!numbersOn;this.classList.toggle('on',numbersOn);refreshLabels();toast(numbersOn?'Números de lote activados':'Números de lote ocultos');};
 
 const C_SALE={libre:'#3fa66a',reservado:'#e0a32e',vendido:'#9a9183'};
 let DATA={},layers={},labels={},centers={};
-let MODE='comprar', currentFilter='todos', adminMode=false, poiVisible=true;
+let MODE='comprar', currentFilter='todos', adminMode=false, poiVisible=true, numbersOn=false;
 const SHEET_ID='1Pw0L4looH6IhS5K4NrXLnwseDTBNpmzCt-dFLB-SLh0', SHEET_GID='1795702258', INVKEY='pv_inv_v1';
 let invSeq=0, REALES=loadInv(), linkMode=null, linkByNum={};
 const numById={}; PARCELAS.features.forEach(f=>numById[f.properties.id]=f.properties.mapNum); // mapNum = clave interna de enlace (no el num original)
@@ -529,10 +532,12 @@ document.getElementById('btnPoi').onclick=function(){poiVisible=!poiVisible;this
 function labelHtml(id){
   const f=PARCELAS.features.find(x=>x.properties.id==id);if(!f)return'';
   const u=uget(id),inf=info(id);
-  const heart=u.fav?'❤ ':'';const eye=(MODE==='comprar'&&u.seen)?'✓ ':'';
-  if(MODE==='alojar') return heart+(isAlq(inf)?('$'+(inf.total||'')):(f.properties.num!=null?f.properties.num:''));
-  if(isVenta(inf)) return heart+(inf.total!=null?'$'+money(inf.total):(f.properties.num!=null?f.properties.num:''));
-  return heart+eye+(f.properties.num!=null?f.properties.num:'');
+  const heart=u.fav?'❤ ':'';
+  const num=(numbersOn&&f.properties.num!=null)?(''+f.properties.num):'';
+  if(MODE==='alojar') return heart+(isAlq(inf)?('$'+(inf.total||'')):num);
+  if(isVenta(inf)) return heart+(inf.total!=null?'$'+money(inf.total):num);
+  const eye=(numbersOn&&u.seen)?'✓ ':'';
+  return heart+eye+num;
 }
 const ZNUM=15; // a partir de este zoom se ven números/precios de parcela
 function refreshLabels(){
@@ -541,11 +546,12 @@ function refreshLabels(){
   document.body.classList.toggle('barriossm', z<15);   // barrios más chicos de lejos
   for(const id in labels){
     const m=labels[id],el=m.getElement(),inf=info(id);
-    const casaV = MODE==='comprar'&&isVenta(inf)&&conCasa(inf);
     if(!passesFilter(id)){if(el)el.style.display='none';continue;}
-    if(!showNums && !casaV){if(el)el.style.display='none';continue;} // de lejos: solo casita en los lotes con casa
+    const casaV = MODE==='comprar'&&isVenta(inf)&&conCasa(inf);
+    let html=casaV?'🏠':'';
+    if(showNums){const lh=labelHtml(id);if(lh)html+=(html?' ':'')+lh;}
+    if(!html){if(el)el.style.display='none';continue;}
     if(el)el.style.display='';
-    const html=(casaV?'🏠':'')+(showNums?(casaV?' ':'')+labelHtml(id):'');
     m.setIcon(L.divIcon({className:'parc-label '+(inf.estado==='libre'?'lib':''),html,iconSize:[50,20]}));
   }
 }
