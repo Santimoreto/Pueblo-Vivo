@@ -1,5 +1,5 @@
 /* Pueblo Vivo · service worker (prototipo) */
-const CACHE='pueblovivo-v16';
+const CACHE='pueblovivo-v17';
 const SHELL=['./','index.html','parcelas-data.js','poi-data.js','lotes-reales.js','manifest.json','icon-512.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(a=>c.add(a).catch(()=>{})))));});
@@ -7,7 +7,8 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const u=e.request.url;
-  const isAsset=u.includes('arcgisonline')||u.includes('tile.openstreetmap')||u.includes('picsum')||u.includes('fonts.g')||u.includes('unpkg.com')||u.includes('drive.google')||u.includes('googleusercontent');
+  if(u.includes('supabase.co')||u.includes('supabase.in'))return; // central: siempre directo, sin SW
+  const isAsset=u.includes('arcgisonline')||u.includes('tile.openstreetmap')||u.includes('picsum')||u.includes('fonts.g')||u.includes('unpkg.com')||u.includes('jsdelivr')||u.includes('drive.google')||u.includes('googleusercontent');
   if(isAsset){ // cache-first (mapas, fotos, librerías)
     e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(res=>{const c=res.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return res;})));
     return;
