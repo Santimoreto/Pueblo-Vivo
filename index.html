@@ -428,8 +428,7 @@ function buildInfo(p){
   const pool=[...FEATS],feats=[],nf=2+Math.floor(r()*3);
   for(let i=0;i<nf;i++)feats.push(pool.splice(Math.floor(r()*pool.length),1)[0]);
   const orient=ORIENT[Math.floor(r()*ORIENT.length)];
-  const fotos=[],nfo=2+Math.floor(r()*2);
-  for(let i=0;i<nfo;i++)fotos.push(`https://picsum.photos/seed/ume${p.id}x${i}/640/420`);
+  const fotos=[]; // sin fotos inventadas: solo se muestran las reales enlazadas o las que sube el cliente
   // ¿es casa en alquiler?
   const isCasa = r()<0.16;
   let rental=null;
@@ -457,9 +456,13 @@ function saveAdmin(){try{localStorage.setItem(AKEY,JSON.stringify(ADMIN));}catch
 function info(id){
   let o=Object.assign({},DATA[id]);
   const L=linkByNum[numById[id]];
-  if(L){o.fromSheet=true;o.listingKey=L.key;o.op=L.op||'venta';o.inmueble=L.inmueble;o.legalidad=L.legalidad;o.tipo=L.tipo;o.nota=L.nota;o.otros=L.otros;o.mtCub=L.mtCub;o.casa=L.casa;o.valorRaw=L.valorRaw;o.sheetMapaN=L.mapaN;if(L.valor!=null)o.total=L.valor;o.estado=(L.nota&&/PAUSAD/i.test(L.nota))?'reservado':'libre';}
+  if(L){o.fromSheet=true;o.listingKey=L.key;o.op=L.op||'venta';o.inmueble=L.inmueble;o.legalidad=L.legalidad;o.tipo=L.tipo;o.nota=L.nota;o.otros=L.otros;o.mtCub=L.mtCub;o.casa=L.casa;if(L.fotos&&L.fotos.length)o.fotos=L.fotos.slice();o.valorRaw=L.valorRaw;o.sheetMapaN=L.mapaN;if(L.valor!=null)o.total=L.valor;o.estado=(L.nota&&/PAUSAD/i.test(L.nota))?'reservado':'libre';}
   return Object.assign(o,ADMIN[id]||{});
 }
+// Fotos reales: ruta local del repo (fotos/..), URL completa, o ID de Drive (fallback)
+function isPath(s){return /^https?:/.test(s)||s.indexOf('/')>=0;}
+function driveSrc(s){return isPath(s)?s:'https://drive.google.com/thumbnail?id='+s+'&sz=w1400';}
+function gphoto(s){const alt=isPath(s)?'':`onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://lh3.googleusercontent.com/d/${s}=w1400'}"`;return `<img class="gphoto" loading="lazy" src="${driveSrc(s)}" ${alt} alt="">`;}
 
 /* ============ Mapa ============ */
 const map=L.map('map',{zoomControl:false}).setView(CENTRO,15);
@@ -668,7 +671,7 @@ function renderLote(id){
   const linked=!!inf.fromSheet, alq=opOf(inf)==='alquiler';
   const stKey=!linked?'novender':(alq?'disp':'libre');
   const stL=!linked?'No listado':(alq?'En alquiler':'En venta');
-  const offF=linked?inf.fotos.map(s=>`<img class="gphoto" src="${s}" loading="lazy" alt="">`).join(''):'';
+  const offF=linked?inf.fotos.map(gphoto).join(''):'';
   const userF=u.photos.map((s,i)=>`<img class="gphoto user" src="${s}" data-up="${i}" alt="">`).join('');
   const nearby=(inf.dist||[]).sort((a,b)=>a.m-b.m).map(d=>`<div class="nb"><div class="ico">${featIcon(d.icon==='tea'?'leaf':'drop')}</div><div class="nm">${d.name}<small>${d.desc}</small></div><div class="d">${fmtDist(d.m)}</div></div>`).join('');
   const comments=u.comments.length?u.comments.map(c=>`<div class="comment"><div class="meta"><span>Vos</span><span>${c.when}</span></div><p>${esc(c.txt)}</p></div>`).join(''):`<p class="empty-c">Anotá lo que viste, qué te gustó, qué consultar…</p>`;
@@ -735,7 +738,7 @@ function renderCasa(id){
   const f=PARCELAS.features.find(x=>x.properties.id==id),p=f.properties,inf=info(id),u=uget(id),rt=inf.rental;
   const avail=isAvailableNow(inf);
   const amen=rt.am.map(a=>`<span class="feat amen">${featIcon(a[1])}${a[0]}</span>`).join('');
-  const offF=inf.fotos.map(s=>`<img class="gphoto" src="${s}" loading="lazy" alt="">`).join('');
+  const offF=inf.fotos.map(gphoto).join('');
   const userF=u.photos.map((s,i)=>`<img class="gphoto user" src="${s}" data-up="${i}" alt="">`).join('');
   const nearby=(inf.dist||[]).sort((a,b)=>a.m-b.m).map(d=>`<div class="nb"><div class="ico">${featIcon('leaf')}</div><div class="nm">${d.name}<small>${d.desc}</small></div><div class="d">${fmtDist(d.m)}</div></div>`).join('');
   scroll.innerHTML=`
@@ -1017,7 +1020,7 @@ function sharePDF(id){const p=PARCELAS.features.find(x=>x.properties.id==id).pro
     <table><tr><td>Superficie</td><td>${money(p.sup)} m² (${(p.sup/10000).toFixed(2)} ha)</td></tr>
     <tr><td>Precio por m²</td><td>USD ${inf.usd}</td></tr><tr><td>Orientación</td><td>${inf.orient}</td></tr>
     <tr><td>Características</td><td>${feats}</td></tr></table>
-    <div class="imgs">${inf.fotos.map(s=>`<img src="${s}">`).join('')}</div>
+    <div class="imgs">${inf.fotos.map(s=>`<img src="${driveSrc(s)}">`).join('')}</div>
     <p style="color:#867d6c;font-size:12px;margin-top:30px">Prototipo · datos de muestra · cartografía Umepay</p>
     <script>setTimeout(()=>window.print(),600)<\/script></body></html>`);w.document.close();}
 
