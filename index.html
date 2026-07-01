@@ -162,6 +162,7 @@ body.poinames .poi-pin .t{display:block}
 #stayBar .starrow{color:#8a7f6b}
 #stayBar .stclear{background:#e7ded0;border:0;border-radius:8px;width:28px;height:28px;color:#6b6152;font-weight:700;cursor:pointer}
 #stayBar .ststat{flex-basis:100%;font-size:12px;color:#1d7a45;font-weight:700}
+#stayBar .ststat.hint{color:#8a7f6b;font-weight:600}
 .availbox{margin:8px 0;padding:9px 12px;border-radius:10px;font-weight:700;font-size:14px}
 .availbox.ok{background:#dff0e4;color:#1d7a45}
 .availbox.no{background:#fbe3de;color:#b23a29}
@@ -696,7 +697,10 @@ let stayIn=null, stayOut=null;
 function stayDates(){ return (stayIn&&stayOut&&stayOut>stayIn)?[stayIn,stayOut]:null; }
 function isFreeFor(inf,inD,outD){ const occ=inf.ocupado||[]; return !occ.some(r=>r&&r.from&&r.to&&inD<r.to&&outD>r.from); }
 function fmtD(iso){ if(!iso)return''; const p=String(iso).split('-'); return p[2]+'/'+p[1]; }
-function updateStayStat(){ const st=document.getElementById('stStat'); if(!st)return; const d=stayDates(); if(!d){st.textContent='';return;} let n=0; for(const id in DATA){const inf=info(id); if(isAlq(inf)&&isFreeFor(inf,d[0],d[1]))n++;} st.textContent='✓ '+n+' disponible'+(n===1?'':'s')+' en esas fechas'; }
+function updateStayStat(){ const st=document.getElementById('stStat'); if(!st)return; const d=stayDates();
+  if(!d){ st.textContent='👆 Elegí las fechas de tu alojamiento y te mostramos solo las casas libres'; st.classList.add('hint'); return; }
+  st.classList.remove('hint'); let n=0; for(const id in DATA){const inf=info(id); if(isAlq(inf)&&isFreeFor(inf,d[0],d[1]))n++;}
+  st.textContent='✓ '+n+' casa'+(n===1?'':'s')+' disponible'+(n===1?'':'s')+' en esas fechas'; }
 function stayRefresh(){buildStayBar();applyFilter();renderFilters();if(openId!=null)render();}
 function buildStayBar(){
   const bar=document.getElementById('stayBar'); if(!bar)return;
