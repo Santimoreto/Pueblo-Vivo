@@ -132,6 +132,8 @@ body.poinames .poi-pin .t{display:block}
   padding:7px 14px;align-items:center;gap:8px;z-index:1140;position:relative}
 .adminbar.show{display:flex}
 .adminbar svg{width:15px;height:15px}
+.adminhint{font-size:11px;color:#8a7f6b;margin-top:6px;line-height:1.35}
+.gphoto.adminimg{cursor:pointer}
 
 /* ---------- Sheets ---------- */
 .scrim{position:fixed;inset:0;background:rgba(28,26,21,.42);z-index:1400;opacity:0;pointer-events:none;transition:opacity .28s}
@@ -451,18 +453,24 @@ let STATE=JSON.parse(localStorage.getItem(SKEY)||"{}");
 let ADMIN=JSON.parse(localStorage.getItem(AKEY)||"{}");
 function uget(id){if(!STATE[id])STATE[id]={fav:false,seen:false,photos:[],comments:[]};return STATE[id];}
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(STATE));}catch(e){toast("Almacenamiento lleno");}}
-function saveAdmin(){try{localStorage.setItem(AKEY,JSON.stringify(ADMIN));}catch(e){}}
+function saveAdmin(){try{localStorage.setItem(AKEY,JSON.stringify(ADMIN));}catch(e){toast('Sin espacio para más fotos en este teléfono');}}
 // info efectiva = sintética + override admin
 function info(id){
   let o=Object.assign({},DATA[id]);
   const L=linkByNum[numById[id]];
   if(L){o.fromSheet=true;o.listingKey=L.key;o.op=L.op||'venta';o.inmueble=L.inmueble;o.legalidad=L.legalidad;o.tipo=L.tipo;o.nota=L.nota;o.otros=L.otros;o.mtCub=L.mtCub;o.casa=L.casa;o.alsoAlq=L.alsoAlq;o.alsoVenta=L.alsoVenta;o.alqPrice=L.alqPrice;if(L.fotos&&L.fotos.length)o.fotos=L.fotos.slice();o.valorRaw=L.valorRaw;o.sheetMapaN=L.mapaN;if(L.valor!=null)o.total=L.valor;o.estado=(L.nota&&/PAUSAD/i.test(L.nota))?'reservado':'libre';}
-  return Object.assign(o,ADMIN[id]||{});
+  o=Object.assign(o,ADMIN[id]||{});
+  const A=ADMIN[id];
+  if(A){let f=(o.fotos||[]).slice();
+    if(A.hideFotos&&A.hideFotos.length)f=f.filter(x=>A.hideFotos.indexOf(x)<0);
+    if(A.addFotos&&A.addFotos.length)f=f.concat(A.addFotos);
+    o.fotos=f;}
+  return o;
 }
 // Fotos reales: ruta local del repo (fotos/..), URL completa, o ID de Drive (fallback)
 function isPath(s){return /^https?:/.test(s)||s.indexOf('/')>=0;}
 function driveSrc(s){return isPath(s)?s:'https://drive.google.com/thumbnail?id='+s+'&sz=w1400';}
-function gphoto(s){const alt=isPath(s)?'':`onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://lh3.googleusercontent.com/d/${s}=w1400'}"`;return `<img class="gphoto" loading="lazy" src="${driveSrc(s)}" ${alt} alt="">`;}
+function gphoto(s,off){const alt=isPath(s)?'':`onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://lh3.googleusercontent.com/d/${s}=w1400'}"`;const da=(off!=null)?` data-off="${off}"`:'';return `<img class="gphoto${off!=null?' adminimg':''}"${da} loading="lazy" src="${driveSrc(s)}" ${alt} alt="">`;}
 
 /* ============ Mapa ============ */
 const map=L.map('map',{zoomControl:false}).setView(CENTRO,15);
@@ -672,7 +680,7 @@ function renderLote(id){
   const linked=!!inf.fromSheet, alq=opOf(inf)==='alquiler';
   const stKey=!linked?'novender':(alq?'disp':'libre');
   const stL=!linked?'No listado':(isDual(inf)?'Venta y alquiler':(alq?'En alquiler':'En venta'));
-  const offF=linked?inf.fotos.map(gphoto).join(''):'';
+  const offF=linked?inf.fotos.map((s,i)=>gphoto(s,adminMode?i:null)).join(''):'';
   const userF=u.photos.map((s,i)=>`<img class="gphoto user" src="${s}" data-up="${i}" alt="">`).join('');
   const nearby=(inf.dist||[]).sort((a,b)=>a.m-b.m).map(d=>`<div class="nb"><div class="ico">${featIcon(d.icon==='tea'?'leaf':'drop')}</div><div class="nm">${d.name}<small>${d.desc}</small></div><div class="d">${fmtDist(d.m)}</div></div>`).join('');
   const comments=u.comments.length?u.comments.map(c=>`<div class="comment"><div class="meta"><span>Vos</span><span>${c.when}</span></div><p>${esc(c.txt)}</p></div>`).join(''):`<p class="empty-c">Anotá lo que viste, qué te gustó, qué consultar…</p>`;
@@ -681,7 +689,8 @@ function renderLote(id){
   let body='';
   if(linked){
     const ppm=inf.total&&p.sup?Math.round(inf.total/p.sup):'';
-    body=`<div class="priceblock"><span class="price"><span class="cur">USD</span>${inf.total?money(inf.total):'—'}${alq?'<span class="per"> /mes</span>':''}</span>${(!alq&&ppm)?`<span class="permeter">≈ USD ${ppm}/m²</span>`:''}</div>
+    const shownP=alq?inf.alqPrice:inf.total;
+    body=`<div class="priceblock"><span class="price"><span class="cur">USD</span>${shownP?money(shownP):'—'}${alq?'<span class="per"> /mes</span>':''}</span>${(!alq&&ppm)?`<span class="permeter">≈ USD ${ppm}/m²</span>`:''}</div>
     ${planillaBox(inf)}
     <div class="stats">
       <div class="stat"><div class="lab">Superficie</div><div class="val">${money(p.sup)} <small>m²</small></div></div>
@@ -707,7 +716,7 @@ function renderLote(id){
   <div class="sec-t">${ic('camera')} Fotos</div>
   <div class="gallery">${offF}${userF}<button class="addphoto" id="addPhoto">${ic('plus')}<span>Subir<br>mi foto</span></button></div>
   ${u.photos.length?'<div class="usertag">Las fotos con borde verde las subiste vos</div>':''}
-  <input type="file" id="fileIn" accept="image/*" capture="environment" style="display:none">`+
+  <input type="file" id="fileIn" accept="image/*" style="display:none">`+
   acciones+
   (adminMode&&linked?adminBox(id,inf,p):'')+`
   <div class="sec-t">${ic('chat')} Mis notas y comentarios</div>
@@ -792,20 +801,23 @@ function adminBox(id,inf,p){
   const feats=(inf.feats||[]).map(f=>f[0]).join(', ');
   const amen=(inf.rental?inf.rental.am:[]).map(a=>a[0]).join(', ');
   const opt=(arr,val)=>arr.map(s=>`<option value="${s}" ${val===s?'selected':''}>${s}</option>`).join('');
+  const opt2=(inf)=>{const cur=isDual(inf)?'ambas':(isAlq(inf)?'alquiler':'venta');return [['venta','En venta'],['alquiler','En alquiler'],['ambas','Venta y alquiler']].map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('');};
   return `<div class="adminbox"><h4>${ic('gear')} Editar lote (inmobiliaria)</h4>
     <div class="field"><label>Nombre / inmueble</label><input id="adNombre" value="${esc(inf.inmueble||('Parcela '+(p.num!=null?p.num:id)))}"></div>
     <div class="field"><label>Estado</label><select id="adEstado">${opt(['libre','reservado','vendido'],inf.estado)}</select></div>
-    <div class="field"><label>Precio total (USD)</label><input id="adPrecio" type="number" value="${inf.total||''}"></div>
+    <div class="field"><label>Operación</label><select id="adOp">${opt2(inf)}</select></div>
+    <div class="field"><label>Precio venta (USD)</label><input id="adPrecio" type="number" value="${inf.total||''}"></div>
+    <div class="field"><label>Precio alquiler (USD/mes)</label><input id="adAlq" type="number" value="${inf.alqPrice||''}" placeholder="ej: 350"></div>
     <div class="field"><label>Orientación</label><select id="adOrient">${opt(ORIENT,inf.orient)}</select></div>
     <div class="field"><label>Legalidad</label><input id="adLegal" value="${esc(inf.legalidad||'')}" placeholder="escritura directa, condominio…"></div>
     <div class="field"><label>Tipo</label><input id="adTipo" value="${esc(inf.tipo||'terreno')}"></div>
     <div class="field"><label>m² cubiertos (si hay construcción)</label><input id="adCub" value="${esc(inf.mtCub||'')}"></div>
     <div class="field"><label>Características (separadas por coma)</label><input id="adFeats" value="${esc(feats)}"></div>
-    <div class="field inline"><label style="margin:0">¿Casa en alquiler?</label><button class="switch ${inf.isCasa?'on':''}" id="adCasa"></button></div>
-    <div id="adCasaWrap" style="${inf.isCasa?'':'display:none'}">
-      <div class="field"><label>Precio por noche (USD)</label><input id="adNight" type="number" value="${inf.rental?inf.rental.nightly:40}"></div>
-      <div class="field"><label>Capacidad (personas)</label><input id="adCap" type="number" value="${inf.rental?inf.rental.cap:4}"></div>
-      <div class="field"><label>Comodidades (separadas por coma)</label><input id="adAmen" value="${esc(amen)}"></div>
+    <div class="field inline"><label style="margin:0">¿Tiene casa construida?</label><button class="switch ${conCasa(inf)?'on':''}" id="adCasa"></button></div>
+    <div class="field"><label>Fotos del aviso</label>
+      <button class="save" id="adAddFoto" style="background:#2b9aa0;margin:2px 0">${ic('camera')} Agregar fotos (de la galería)</button>
+      <input type="file" id="adFileIn" accept="image/*" multiple style="display:none">
+      <div class="adminhint">Tocá una foto de la galería de arriba para quitarla. Quedan guardadas en este teléfono.</div>
     </div>
     <button class="save" id="adSave">Guardar cambios</button>
     ${inf.fromSheet?`<button class="save" id="adUnlink" style="background:#fff;border:1.5px solid var(--terra);color:var(--terra);margin-top:8px">Desvincular de la planilla</button>`:''}
@@ -831,21 +843,37 @@ function wireLote(id){
 }
 function wireAdmin(id){
   const casaBtn=document.getElementById('adCasa');
-  casaBtn.onclick=()=>{casaBtn.classList.toggle('on');document.getElementById('adCasaWrap').style.display=casaBtn.classList.contains('on')?'':'none';};
+  casaBtn.onclick=()=>casaBtn.classList.toggle('on');
   const txt2feats=(s,ic)=>s.split(',').map(x=>x.trim()).filter(Boolean).map(t=>{const m=AMEN.find(a=>a[0].toLowerCase()===t.toLowerCase())||FEATS.find(a=>a[0].toLowerCase()===t.toLowerCase());return [t,m?m[1]:ic];});
+  // Agregar fotos al aviso (desde la galería, quedan guardadas)
+  const addBtn=document.getElementById('adAddFoto'), afi=document.getElementById('adFileIn');
+  if(addBtn)addBtn.onclick=()=>afi.click();
+  if(afi)afi.onchange=e=>{const files=[...e.target.files];if(!files.length)return;let pend=files.length;const ov=Object.assign({},ADMIN[id]);ov.addFotos=(ov.addFotos||[]).slice();
+    files.forEach(file=>{const rd=new FileReader();rd.onload=()=>resizeImg(rd.result,1100,img=>{ov.addFotos.push(img);if(--pend===0){ADMIN[id]=ov;saveAdmin();render();toast(files.length>1?files.length+' fotos agregadas ✓':'Foto agregada ✓');}});rd.readAsDataURL(file);});};
+  // Quitar una foto del aviso (tocar la foto)
+  const infA=info(id);
+  scroll.querySelectorAll('.gphoto[data-off]').forEach(im=>im.onclick=()=>{
+    const s=infA.fotos[+im.dataset.off];if(s==null)return;
+    if(!confirm('¿Quitar esta foto del aviso?'))return;
+    const ov=Object.assign({},ADMIN[id]);
+    if(String(s).slice(0,5)==='data:'){ov.addFotos=(ov.addFotos||[]).filter(x=>x!==s);}
+    else{ov.hideFotos=(ov.hideFotos||[]).concat([s]);}
+    ADMIN[id]=ov;saveAdmin();render();
+  });
   document.getElementById('adSave').onclick=()=>{
     const g=i=>document.getElementById(i), ov=Object.assign({},ADMIN[id]);
     ov.inmueble=g('adNombre').value.trim()||null;
     ov.estado=g('adEstado').value;
     ov.total=+g('adPrecio').value||0;
+    ov.alqPrice=+g('adAlq').value||null;
+    const op=g('adOp').value;
+    if(op==='ambas'){ov.op='venta';ov.alsoAlq=true;}else{ov.op=op;ov.alsoAlq=false;}
     ov.orient=g('adOrient').value;
     ov.legalidad=g('adLegal').value.trim()||null;
     ov.tipo=g('adTipo').value.trim()||null;
     ov.mtCub=g('adCub').value.trim()||null;
+    ov.casa=casaBtn.classList.contains('on');
     ov.feats=txt2feats(g('adFeats').value,'star');
-    const isCasa=casaBtn.classList.contains('on');ov.isCasa=isCasa;
-    if(isCasa){const base=DATA[id].rental||{busy:[]};ov.rental=Object.assign({},base,{nightly:+g('adNight').value||40,cap:+g('adCap').value||4,am:txt2feats(g('adAmen').value,'home')});}
-    else ov.rental=null;
     ADMIN[id]=ov;saveAdmin();estiloRefresh(id);renderFilters();render();toast('Cambios guardados ✓');
   };
   const un=document.getElementById('adUnlink');
