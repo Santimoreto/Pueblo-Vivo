@@ -777,6 +777,31 @@ function fichaBlock(inf){
   const precio=(c.pb||c.pa)?`<div class="fichaprice">${c.pb?('Temp. baja: <b>USD '+esc(String(c.pb))+'</b>/noche'):''}${(c.pb&&c.pa)?' · ':''}${c.pa?('alta: <b>USD '+esc(String(c.pa))+'</b>/noche'):''}</div>`:'';
   return `<div class="sec-t">${ic('home')} Ficha del alojamiento${casas.length>1?' · '+casas.length+' casas en este lote':''}</div>${tabs}<div class="fichanom">${esc(c.n)}</div>${precio}<div class="ficha">${body}</div>`;
 }
+/* ===== Sincronización en vivo con la planilla de alquileres ===== */
+const RENT_SHEET_ID='1ljsG-Sc6j9XNmoXrWjvn-JDKzvY95UJG', RENT_GID='765860150';
+function parseCSVtext(t){const rows=[];let row=[],cur="",q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else{if(c==='"')q=true;else if(c===","){row.push(cur);cur="";}else if(c==="\n"){row.push(cur);rows.push(row);row=[];cur="";}else if(c==="\r"){}else cur+=c;}}if(cur!==""||row.length){row.push(cur);rows.push(row);}return rows;}
+async function syncRentSheet(){
+  try{
+    const url='https://docs.google.com/spreadsheets/d/'+RENT_SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+RENT_GID;
+    const R=parseCSVtext(await (await fetch(url)).text());
+    if(!R[2])return;
+    const names=R[2].slice(2), houses=names.map((n,i)=>({name:(n||'').trim(),col:i+2,f:[]}));
+    const SKIP=['Lote','Barrio','Link carpeta de fotos (Drive)']; let sec='';
+    R.forEach((row,ri)=>{if(ri<3)return;const s0=(row[0]||'').trim();if(s0)sec=s0;const q=(row[1]||'').trim();if(!q)return;
+      houses.forEach(h=>{const v=(row[h.col]||'').trim();
+        if(q==='Lote')h.lote=v?parseInt(v):null;
+        else if(q==='Precio por noche (temporada baja)')h.pb=v||null;
+        else if(q==='Precio por noche (temporada alta)')h.pa=v||null;
+        else if(SKIP.indexOf(q)<0&&v&&v!=='x'&&v!=='o')h.f.push([sec,q,v]);});});
+    const byLote={};houses.forEach(h=>{if(h.lote==null||!h.name)return;(byLote[h.lote]=byLote[h.lote]||[]).push(h);});
+    Object.keys(byLote).forEach(k=>{const lote=+k,hs=byLote[k];let r=REALES.find(x=>x.loteNum===lote);
+      const price=hs[0].pb?parseInt(String(hs[0].pb).replace(/\D/g,'')):null;
+      const casas=hs.map(h=>{const old=(r&&r.casas)?r.casas.find(c=>c.n===h.name):null;return {n:h.name,pb:h.pb||null,pa:h.pa||null,fotos:old?old.fotos:[],f:h.f};});
+      if(r){r.casas=casas;if(r.valor!=null)r.alsoAlq=true;else r.op='alquiler';if(price)r.alqPrice=price;}
+      else REALES.push({key:'al-'+lote,barrio:'',inmueble:hs.length>1?hs.map(h=>h.name).join(' / '):hs[0].name,tipo:'casa',mapaN:null,legalidad:null,mtTerreno:null,mtCub:null,semicub:null,otros:null,valor:null,valorRaw:null,nota:null,loteNum:lote,op:'alquiler',casas,alqPrice:price});});
+    buildLinks();renderFilters();applyFilter();if(openId!=null)render();
+  }catch(e){console.warn('syncRentSheet',e);}
+}
 function counts(){
   let c={todos:0,fav:0,seen:0,ventaLote:0,ventaCasa:0,alquiler:0};
   for(const id in DATA){const inf=info(id),u=uget(id);
@@ -1424,6 +1449,7 @@ document.getElementById('lightbox').addEventListener('click',e=>{ if(e.target.id
 /* ============ init ============ */
 buildLinks();renderFilters();renderLegend();applyFilter();refreshLabels();updateRouteBadge();
 if(sb){ sbInitAuth(); loadShared(); }
+syncRentSheet();
 try{map.fitBounds(L.featureGroup(Object.values(layers)).getBounds(),{padding:[30,30]});}catch(e){}
 
 /* Instalar como app */
