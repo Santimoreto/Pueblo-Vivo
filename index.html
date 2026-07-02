@@ -107,8 +107,17 @@ button{font-family:inherit;cursor:pointer}
 .parc-label.lib{color:#ffd2a6}
 body.lightbase .parc-label{color:#26241d;text-shadow:0 0 2px #fff,0 0 4px #fff,0 1px 2px #fff}
 body.lightbase .parc-label.lib{color:#b5611a}
-.lbl-barrio{display:flex;justify-content:center;align-items:center;background:transparent;border:0;box-shadow:none}
-.lbl-barrio span{background:rgba(122,67,38,.92);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.45);white-space:nowrap;transition:font-size .12s}
+.lbl-barrio{display:flex;justify-content:center;align-items:center;background:transparent;border:0;box-shadow:none;pointer-events:none}
+.lbl-barrio span{background:rgba(122,67,38,.92);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.45);white-space:nowrap;transition:font-size .12s;pointer-events:auto;cursor:pointer}
+.lbl-barrio span:active{transform:scale(.94)}
+.bstats{display:flex;gap:8px;margin:2px 0 6px}
+.bstat{flex:1;background:#f5efe4;border-radius:12px;padding:10px;text-align:center}
+.bstat b{display:block;font-size:20px;color:var(--forest);font-family:'Fraunces',serif}
+.bstat span{font-size:11.5px;color:#8a7f6b}
+.brow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;background:#faf6ee;border-radius:10px;margin-bottom:6px;cursor:pointer;border:1px solid #efe7d8}
+.brow:active{background:#f0e8da}
+.brow .bnm{font-weight:700;color:var(--ink)}
+.brow .bpr{font-size:13px;color:var(--forest);font-weight:700;white-space:nowrap}
 body.barriossm .lbl-barrio span{font-size:7.5px;padding:1px 4px;letter-spacing:.02em;opacity:.92;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .poi-icon{background:transparent;border:0}
 .poi-pin{display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
@@ -629,6 +638,27 @@ const barrioLayer=L.layerGroup().addTo(map);
   for(const k in g){const pts=g[k].pts;const lat=pts.reduce((s,p)=>s+p[0],0)/pts.length,lng=pts.reduce((s,p)=>s+p[1],0)/pts.length;
     L.marker([lat,lng],{icon:L.divIcon({className:'lbl-barrio',html:'<span>'+g[k].name+'</span>',iconSize:[140,22],iconAnchor:[70,11]}),interactive:false,zIndexOffset:-200}).addTo(barrioLayer);}
 })();
+/* Tocar el nombre de un barrio → panel de info del barrio */
+map.getContainer().addEventListener('click',e=>{const sp=e.target&&e.target.closest?e.target.closest('.lbl-barrio span'):null;if(sp){e.stopPropagation();openBarrio(sp.textContent.trim());}},true);
+function openBarrio(name){
+  const nn=name.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const ids=PARCELAS.features.filter(f=>String(f.properties.barrio).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')===nn).map(f=>f.properties.id);
+  const venta=[],alq=[];
+  ids.forEach(id=>{const inf=info(id);if(isVenta(inf))venta.push({id,inf});if(isAlq(inf))alq.push({id,inf});});
+  const vP=venta.map(x=>x.inf.total).filter(Boolean), aP=alq.map(x=>x.inf.alqPrice).filter(Boolean);
+  const rng=arr=>!arr.length?'':(Math.min(...arr)===Math.max(...arr)?'USD '+money(arr[0]):'USD '+money(Math.min(...arr))+'–'+money(Math.max(...arr)));
+  const mapNumOf=id=>PARCELAS.features.find(f=>f.properties.id==id).properties.mapNum;
+  const row=(x,op)=>{const inf=x.inf;const nom=inf.inmueble||('Parcela '+mapNumOf(x.id));const pr=op==='v'?(inf.total?'USD '+money(inf.total):'Consultar'):(inf.alqPrice?'USD '+money(inf.alqPrice)+'/noche':'Consultar');return `<div class="brow" data-ol="${x.id}"><span class="bnm">${esc(nom)}</span><span class="bpr">${pr}</span></div>`;};
+  scroll.innerHTML=`<div class="sh-head"><div class="sh-title"><span class="barrio">Barrio</span><h2>${esc(name)}</h2></div></div>
+    <div class="bstats"><div class="bstat"><b>${ids.length}</b><span>parcelas</span></div><div class="bstat"><b>${venta.length}</b><span>en venta</span></div><div class="bstat"><b>${alq.length}</b><span>en alquiler</span></div></div>
+    ${venta.length?`<div class="sec-t">${ic('pin')} En venta${rng(vP)?' · '+rng(vP):''}</div>${venta.map(x=>row(x,'v')).join('')}`:''}
+    ${alq.length?`<div class="sec-t">${ic('home')} En alquiler${aP.length?' · desde USD '+money(Math.min(...aP))+'/noche':''}</div>${alq.map(x=>row(x,'a')).join('')}`:''}
+    ${(!venta.length&&!alq.length)?'<p class="empty-c">Todavía no hay propiedades cargadas en este barrio.</p>':''}
+    <p class="disclaimer">Tocá una propiedad para ver su ficha.</p>`;
+  scroll.querySelectorAll('[data-ol]').forEach(el=>el.onclick=()=>openSheet(+el.dataset.ol));
+  openId=null; casaSel=0;
+  scrim.classList.add('show'); sheet.classList.add('open');
+}
 
 function onLoteClick(id){ if(linkMode!=null){linkListing(linkMode,id);return;} if(MODE==='comprar'&&compareMode){toggleCompare(id);return;} openSheet(id); }
 
